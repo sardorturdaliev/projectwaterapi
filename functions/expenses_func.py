@@ -22,6 +22,8 @@ def all_expenses(search, page, limit, db, branch_id):
 
 def create_expenses_y(form, db, this_user):
     kassa = the_one(form.kassa_id, Kassas, db)
+    if form.sorce in ['user', 'warehouses']:
+        raise HTTPException(status_code=400, detail="source error")
     if form.money <= kassa.balance:
         new_expenses_db = Expenses(
             money=form.money,
@@ -44,6 +46,8 @@ def update_expenses_y(form, db, this_user):
         old_expenses = the_one(form.id, Expenses, db)
         new_expense_money = old_expenses.money + form.money
         kassa = the_one(old_expenses.kassa_id, Kassas, db)
+        if form.sorce in ['user', 'warehouses']:
+            raise HTTPException(status_code=400, detail="source error")
         if form.money <= kassa.balance:
             db.query(Expenses).filter(Expenses.id == form.id).update({
                 Expenses.id: form.id,

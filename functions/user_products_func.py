@@ -11,10 +11,10 @@ def all_user_products(page, limit, db, branch_id):
     return pagination(products, page, limit)
 
 
-def create_user_products_y(form, db,this_user):
+def create_user_products_y(product_id, quantity, db, this_user):
     new_user_products_db = User_products(
-        product_id=form.product_id,
-        quantity=form.quantity,
+        product_id=product_id,
+        quantity=quantity,
         user_id=this_user.id,
         branch_id=this_user.branch_id
     )

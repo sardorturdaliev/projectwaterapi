@@ -7,6 +7,7 @@ from models.incomes import Incomes
 from models.kassa import Kassas
 from models.orders import Orders
 from models.trades import Trades
+from models.transfers import Transfers
 from models.users import Users
 from models.warehouse_products import Warehouses_products
 from utils.db_operations import get_in_db, save_in_db, the_one
@@ -26,30 +27,30 @@ def create_income_r(form, db, thisuser):
     kassa = the_one(form.kassa_id, Kassas, db)
     if form.source == "order":
         order = db.query(Orders).filter(Orders.id == form.source_id).first()
-        trades = db.query(Trades).filter(Trades.order_id == order.id)
-        if order and order.status == "1":
-            for trade in trades:
-                quantity = trade.quantity
-                warehouse_pr_id = trade.warehouse_pr_id
-                old = db.query(Warehouses_products).filter(Warehouses_products.id == warehouse_pr_id).first()
-                print(old.quantity)
-                if old.quantity > quantity:
-                    new_quantity = old.quantity - quantity
-                    db.query(Warehouses_products).filter(Warehouses_products.id == warehouse_pr_id).update({
-                        Warehouses_products.quantity: new_quantity
-                    })
-                    db.commit()
-                    db.query(Orders).filter(Orders.id == form.source_id).update({
-                Orders.status: "2"
-                })
-                    db.commit()
-                else:
-                    raise HTTPException(status_code=400,detail="Omborda siz so'ragancha maxsulot yoq")
+        trades = db.query(Trades).filter(Trades.order_id == order.id).first()
+        transfer = db.query(Transfers).filter(Transfers.order_id == order.id).first()
+        money = transfer.quanitity * trades.price
+        driver_balance = db.query(Users).filter(Users.id == transfer.driver_id).first()
+        if order and order.status == 2 and driver_balance == money:
+            new_income = Incomes(
+                money=money,
+                date=datetime.today(),
+                comment=form.comment,
+                kassa_id=form.kassa_id,
+                user_id=thisuser.id,
+                branch_id=thisuser.branch_id,
+                source=form.source,
+                source_id=form.source_id,
+            )
+            save_in_db(db, new_income)
+            update_kassa_r(form.kassa_id, form.money, db, thisuser.id)
+        else:
+            raise HTTPException(status_code=400, detail="To'lov to'liq bo'maguncha, kirim qilib bo'lmaydi")
 
-        old_user_balance = db.query(Users).filter(Users.id == thisuser.id).first()
-        new_balance = old_user_balance.balance + form.money
-        db.query(Users).filter(Users.id == thisuser.id).update({
-            Users.balance: new_balance
+        old_kassa_balance = db.query(Kassas).filter(Kassas.id == form.kassa_id).first()
+        new_balance = old_kassa_balance.balance + Decimal(form.money)
+        db.query(Kassas).filter(Kassas.id == form.kassa_id).update({
+            Kassas.balance: new_balance
         })
         db.commit()
                     # update_kassa_r(form.kassa_id,form.money,db,thisuser.id)
@@ -65,7 +66,7 @@ def create_income_r(form, db, thisuser):
                 user_id=thisuser.id,
                 branch_id=thisuser.branch_id,
                 source=form.source,
-                source_id=thisuser.id
+                source_id=form.source_id,
             )
             save_in_db(db, new_income)
             update_kassa_r(form.kassa_id, form.money, db, thisuser.id)
@@ -77,9 +78,6 @@ def create_income_r(form, db, thisuser):
             db.commit()
         else:
             raise HTTPException(status_code=400,detail="Balansizgizda yetarli mablag' yo'q yoki notogri malumot kiritdingiz")
-    
-    elif form.source == "admin":
-        pass
 
 
 def update_income_e(form, db, thisuser):
@@ -114,4 +112,3 @@ def delete_income_e(id, db):
     get_in_db(db, Incomes, id)
     db.query(Incomes).filter(Incomes.id == id).delete()
     db.commit()
-

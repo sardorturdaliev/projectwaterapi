@@ -16,8 +16,8 @@ from routers.customers_routers import customers_routers
 from routers.expenses_routers import expenses_router
 from routers.phone_routers import phones_router
 from routers.supplies_routers import supplies_router
-from routers.trades_routers import trades_router
 from routers.transfers_routers import transfers_router
+from routers.trades_routers import trades_router
 from routers.user_products_routers import user_products_router
 from routers.user_routers import users_router
 from routers.kassa_routers import kassas_router
